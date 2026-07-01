@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# SwiftPM build output
+/.build/
+.swiftpm/
+Package.resolved
+
+# Built app bundle (produced by build-app.sh / scripts/release.sh)
+/SnapCraft.app/
+
+# Release artifacts (DMG, update zip, generated appcast)
+/dist/
+
+# Sparkle signing keys — NEVER commit the private key
+sparkle_private_key*
+*.pem
+
+# Nested publishing repos (each is its own git repo, pushed separately)
+/release-repo/
+
+# Xcode user state (if opened in Xcode)
+xcuserdata/
+*.xcuserstate
