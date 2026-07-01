@@ -118,14 +118,28 @@ struct CanvasView: View {
            let idx = viewModel.annotations.firstIndex(where: { $0.id == id }) {
             let a = viewModel.annotations[idx]
             let p = a.start.scaled(zoom)
-            TextField("Text", text: Binding(
+            let isTooltip = a.kind == .tooltip
+            let field = TextField(isTooltip ? "Tooltip" : "Text", text: Binding(
                 get: { viewModel.annotations.first(where: { $0.id == id })?.text ?? "" },
                 set: { newValue in viewModel.update(id: id) { $0.text = newValue } }))
                 .textFieldStyle(.plain)
-                .font(.system(size: max(14, a.strokeWidth * 2.4) * zoom, weight: .semibold))
-                .foregroundStyle(a.color)
+                .font(.system(size: isTooltip ? max(13, a.strokeWidth * 2.0) * zoom
+                                                : max(14, a.strokeWidth * 2.4) * zoom,
+                              weight: isTooltip ? .medium : .semibold))
+                .foregroundStyle(isTooltip ? .white : a.color)
                 .focused($textFocused)
-                .frame(minWidth: 60, alignment: .leading)
+            // Tooltips type inside the colored bubble; plain text sits bare.
+            Group {
+                if isTooltip {
+                    field
+                        .frame(minWidth: 60, maxWidth: 260 * zoom, alignment: .leading)
+                        .padding(.horizontal, 10 * zoom)
+                        .padding(.vertical, 7 * zoom)
+                        .background(RoundedRectangle(cornerRadius: 8 * zoom).fill(a.color))
+                } else {
+                    field.frame(minWidth: 60, alignment: .leading)
+                }
+            }
                 .offset(x: p.x, y: p.y)
                 .onSubmit { commitTextEditing() }
                 // Escape ends typing and switches to Select so the text box can
@@ -175,7 +189,7 @@ struct CanvasView: View {
                 marqueeRect = CGRect(x: min(start.x, p.x), y: min(start.y, p.y),
                                      width: abs(p.x - start.x), height: abs(p.y - start.y))
             }
-        case .text, .step:
+        case .text, .tooltip, .step:
             break // single-click placement
         default:
             if let id = draftID {
@@ -195,8 +209,9 @@ struct CanvasView: View {
         case .crop, .ocr:
             marqueeRect = CGRect(origin: p, size: .zero)
 
-        case .text:
-            var a = Annotation(kind: .text, color: viewModel.color,
+        case .text, .tooltip:
+            var a = Annotation(kind: viewModel.tool == .tooltip ? .tooltip : .text,
+                               color: viewModel.color,
                                strokeWidth: viewModel.strokeWidth.rawValue)
             a.start = p
             viewModel.add(a)
@@ -259,6 +274,7 @@ struct CanvasView: View {
     private func kind(for tool: Tool) -> Annotation.Kind {
         switch tool {
         case .arrow:  return .arrow
+        case .doubleArrow: return .doubleArrow
         case .line:   return .line
         case .shape:  return .shape
         case .pen:    return .pen
@@ -283,6 +299,8 @@ struct CanvasView: View {
             return r
         case .text, .step:
             return CGRect(x: a.start.x - 14, y: a.start.y - 14, width: 60, height: 28)
+        case .tooltip:
+            return CGRect(x: a.start.x - 6, y: a.start.y - 6, width: 120, height: 44)
         default:
             return a.rect
         }

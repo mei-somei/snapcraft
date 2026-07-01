@@ -7,7 +7,9 @@ enum Tool: String, CaseIterable, Identifiable {
     case crop       // crop
     case shape      // square
     case arrow      // arrow-up-right  (default active)
+    case doubleArrow // move-horizontal (arrowheads on both ends)
     case line       // minus
+    case tooltip    // message-square (text callout bubble)
     case pen        // pencil
     case marker     // highlighter
     case text       // type
@@ -23,7 +25,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .crop:   return "Crop"
         case .shape:  return "Shape"
         case .arrow:  return "Arrow"
+        case .doubleArrow: return "Double arrow"
         case .line:   return "Line"
+        case .tooltip: return "Tooltip"
         case .pen:    return "Pen"
         case .marker: return "Highlighter"
         case .text:   return "Text"
@@ -39,7 +43,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .crop:   return "crop"
         case .shape:  return "square"
         case .arrow:  return "arrow.up.right"
+        case .doubleArrow: return "arrow.left.and.right"
         case .line:   return "minus"
+        case .tooltip: return "bubble.left"
         case .pen:    return "pencil"
         case .marker: return "highlighter"
         case .text:   return "textformat"
@@ -56,7 +62,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .crop:   return "c"
         case .shape:  return "r"   // rectangle
         case .arrow:  return "a"
+        case .doubleArrow: return "d"
         case .line:   return "l"
+        case .tooltip: return "u"
         case .pen:    return "p"
         case .marker: return "h"   // highlighter
         case .text:   return "t"

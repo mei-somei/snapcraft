@@ -10,7 +10,7 @@ struct ToolStrip: View {
     /// Tool groups separated by hairline dividers, mirroring the design order.
     private let groups: [[Tool]] = [
         [.select, .crop],
-        [.shape, .arrow, .line, .pen, .marker, .text, .step],
+        [.shape, .arrow, .doubleArrow, .line, .pen, .marker, .text, .tooltip, .step],
         [.blur, .ocr],
     ]
 

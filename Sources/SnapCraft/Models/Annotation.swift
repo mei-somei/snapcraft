@@ -6,11 +6,13 @@ import SwiftUI
 struct Annotation: Identifiable {
     enum Kind {
         case arrow
+        case doubleArrow // arrowheads on both ends
         case line
         case shape      // rectangle outline
         case pen        // freehand path
         case marker     // highlighter rectangle (multiply blend)
         case text
+        case tooltip    // text inside a callout bubble
         case step       // numbered badge
         case blur       // redaction rectangle
     }

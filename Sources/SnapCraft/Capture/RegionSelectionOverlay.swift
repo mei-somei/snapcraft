@@ -16,6 +16,7 @@ final class RegionSelectionOverlay {
 
     private var window: NSWindow?
     private var monitor: Any?
+    private var globalMonitor: Any?
     private var completion: ((Result?) -> Void)?
 
     /// Present the overlay on the screen under the cursor.
@@ -27,8 +28,11 @@ final class RegionSelectionOverlay {
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main!
 
-        let win = NSWindow(contentRect: screen.frame, styleMask: .borderless,
-                           backing: .buffered, defer: false, screen: screen)
+        // A plain borderless NSWindow refuses to become key, which kills keyboard
+        // focus (Escape) and makes mouse routing unreliable. Use a subclass that
+        // opts back in so the overlay actually receives events.
+        let win = KeyableOverlayWindow(contentRect: screen.frame, styleMask: .borderless,
+                                       backing: .buffered, defer: false, screen: screen)
         win.level = .screenSaver
         win.backgroundColor = .clear
         win.isOpaque = false
@@ -51,10 +55,17 @@ final class RegionSelectionOverlay {
         win.makeFirstResponder(view)
         NSCursor.crosshair.push()
 
-        // Escape anywhere cancels.
+        // Circuit breaker: Escape always tears the overlay down.
+        // Local monitor swallows Escape while the app is key (returns nil so it
+        // isn't beeped/forwarded)...
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { self?.finish(nil); return nil }
             return event
+        }
+        // ...and a global monitor catches Escape even if focus ended up elsewhere,
+        // so the overlay can never get "stuck" with no way out.
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 { self?.finish(nil) }
         }
 
         self.window = win
@@ -63,6 +74,7 @@ final class RegionSelectionOverlay {
     private func finish(_ result: Result?) {
         NSCursor.pop()
         if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor); self.globalMonitor = nil }
         window?.orderOut(nil)
         window = nil
         let done = completion
@@ -186,6 +198,13 @@ private final class SelectionView: NSView {
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { onCancel?() } else { super.keyDown(with: event) }
     }
+}
+
+/// Borderless windows can't become key by default, which breaks keyboard focus
+/// (Escape) and reliable mouse routing for the overlay. Opt back in.
+private final class KeyableOverlayWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }
 
 private extension AccentPalette {

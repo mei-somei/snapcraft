@@ -38,8 +38,8 @@ struct AnnotationLayer: View {
                     for a in annotations { drawVector(a, in: &ctx, scale: scale) }
                 }
 
-                // Text + numbered-step badges as crisp SwiftUI views.
-                ForEach(annotations.filter { $0.kind == .text || $0.kind == .step }) { a in
+                // Text, tooltip bubbles, and numbered-step badges as crisp SwiftUI views.
+                ForEach(annotations.filter { $0.kind == .text || $0.kind == .tooltip || $0.kind == .step }) { a in
                     overlay(for: a, scale: scale)
                 }
             }
@@ -64,6 +64,13 @@ struct AnnotationLayer: View {
             ctx.stroke(p, with: .color(a.color), style: style)
             ctx.stroke(arrowHead(from: s, to: e, size: max(12, lineW * 3.2)),
                        with: .color(a.color), style: style)
+
+        case .doubleArrow:
+            let head = max(12, lineW * 3.2)
+            var p = Path(); p.move(to: s); p.addLine(to: e)
+            ctx.stroke(p, with: .color(a.color), style: style)
+            ctx.stroke(arrowHead(from: s, to: e, size: head), with: .color(a.color), style: style)
+            ctx.stroke(arrowHead(from: e, to: s, size: head), with: .color(a.color), style: style)
 
         case .shape:
             let r = a.rect.scaled(scale)
@@ -116,6 +123,14 @@ struct AnnotationLayer: View {
                     .fixedSize()
                     .offset(x: p.x, y: p.y)
             }
+        case .tooltip:
+            // Empty tooltips render nothing (matches the .text behaviour); the
+            // inline editor supplies its own bubble + placeholder while typing.
+            if !a.text.isEmpty {
+                TooltipBubble(text: a.text, color: a.color, scale: scale,
+                              fontSize: max(13, a.strokeWidth * 2.0) * scale)
+                    .offset(x: p.x, y: p.y)
+            }
         case .step:
             let d: CGFloat = 26 * scale
             Text("\(a.stepNumber)")
@@ -128,6 +143,50 @@ struct AnnotationLayer: View {
         default:
             EmptyView()
         }
+    }
+}
+
+/// A rounded callout bubble with a small pointer tail at the bottom-left,
+/// anchored so its top-left sits at the annotation's `start` point. Shared by
+/// the live editor and the exporter via `AnnotationLayer`.
+struct TooltipBubble: View {
+    let text: String
+    let color: Color
+    let scale: CGFloat
+    let fontSize: CGFloat
+
+    var body: some View {
+        Text(text.isEmpty ? " " : text)
+            .font(.system(size: fontSize, weight: .medium))
+            .foregroundStyle(.white)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 260 * scale, alignment: .leading)
+            .padding(.horizontal, 10 * scale)
+            .padding(.vertical, 7 * scale)
+            .background(
+                RoundedRectangle(cornerRadius: 8 * scale)
+                    .fill(color)
+            )
+            .overlay(alignment: .bottomLeading) {
+                // Pointer tail pointing down from the bubble's lower-left.
+                Triangle()
+                    .fill(color)
+                    .frame(width: 12 * scale, height: 7 * scale)
+                    .offset(x: 14 * scale, y: 6 * scale)
+            }
+            .shadow(color: .black.opacity(0.22), radius: 4 * scale, y: 2 * scale)
+    }
+}
+
+/// Downward-pointing triangle used for the tooltip's tail.
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        p.closeSubpath()
+        return p
     }
 }
 
